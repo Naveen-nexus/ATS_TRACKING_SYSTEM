@@ -1,0 +1,153 @@
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Search, Filter, Download, CheckSquare, XSquare, Star, ChevronDown, Users } from 'lucide-react';
+import { Card } from '../../components/ui/Card';
+import { Badge } from '../../components/ui/Badge';
+import { Button } from '../../components/ui/Button';
+import { Tag } from '../../components/ui/Tag';
+import { ProgressBar } from '../../components/ui/ProgressBar';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { Avatar } from '../../components/ui/Avatar';
+import { mockCandidates, mockRecruiterJobs } from '../../data/mockData';
+import { formatDate } from '../../utils/helpers';
+import toast from 'react-hot-toast';
+
+const statusVariants = { Applied: 'blue', 'Under Review': 'yellow', Shortlisted: 'purple', 'Interview Scheduled': 'indigo', Selected: 'green', Rejected: 'red' };
+const colorPalette = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#ec4899'];
+
+export const Applicants = () => {
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [sortBy, setSortBy] = useState('matchScore');
+  const [selectedJob, setSelectedJob] = useState('All');
+  const [selected, setSelected] = useState([]);
+  const [candidates, setCandidates] = useState(mockCandidates);
+
+  const filtered = candidates
+    .filter(c => {
+      const matchSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.skills.some(s => s.toLowerCase().includes(search.toLowerCase()));
+      const matchStatus = statusFilter === 'All' || c.status === statusFilter;
+      return matchSearch && matchStatus;
+    })
+    .sort((a, b) => sortBy === 'matchScore' ? b.matchScore - a.matchScore : new Date(b.appliedDate) - new Date(a.appliedDate));
+
+  const toggleSelect = (id) => setSelected(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  const selectAll = () => setSelected(filtered.map(c => c.id));
+  const clearSelect = () => setSelected([]);
+
+  const bulkShortlist = () => {
+    setCandidates(prev => prev.map(c => selected.includes(c.id) && c.matchScore >= 80 ? { ...c, status: 'Shortlisted' } : c));
+    toast.success(`Shortlisted ${selected.length} candidates with 80%+ match`);
+    clearSelect();
+  };
+
+  const bulkReject = () => {
+    setCandidates(prev => prev.map(c => selected.includes(c.id) ? { ...c, status: 'Rejected' } : c));
+    toast.success(`Rejected ${selected.length} candidates`);
+    clearSelect();
+  };
+
+  const updateStatus = (id, status) => {
+    setCandidates(prev => prev.map(c => c.id === id ? { ...c, status } : c));
+    toast.success('Status updated');
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto space-y-5">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Applicants</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{candidates.length} total candidates across all jobs</p>
+        </div>
+        <Button variant="secondary" size="sm" className="flex items-center gap-1.5"><Download size={14} /> Export CSV</Button>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-48">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search candidates or skills..." className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div className="relative">
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="appearance-none pl-3 pr-8 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            {['All', 'Applied', 'Under Review', 'Shortlisted', 'Interview Scheduled', 'Selected', 'Rejected'].map(s => <option key={s}>{s}</option>)}
+          </select>
+          <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+        </div>
+        <div className="relative">
+          <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="appearance-none pl-3 pr-8 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="matchScore">Highest Match</option>
+            <option value="date">Newest First</option>
+          </select>
+          <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+        </div>
+      </div>
+
+      {/* Bulk Actions */}
+      {selected.length > 0 && (
+        <div className="flex items-center gap-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-xl px-4 py-3">
+          <span className="text-sm font-medium text-blue-700 dark:text-blue-300">{selected.length} selected</span>
+          <Button size="xs" variant="success" onClick={bulkShortlist} className="ml-2">
+            <Star size={12} /> Shortlist ≥80% Match
+          </Button>
+          <Button size="xs" variant="danger" onClick={bulkReject}>
+            <XSquare size={12} /> Reject Selected
+          </Button>
+          <button onClick={clearSelect} className="ml-auto text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">Clear</button>
+        </div>
+      )}
+
+      {/* Candidates */}
+      {filtered.length === 0 ? (
+        <EmptyState type="users" title="No candidates found" description="No candidates match your current filters." />
+      ) : (
+        <>
+          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+            <button onClick={selectAll} className="flex items-center gap-1.5 hover:text-blue-600 transition-colors">
+              <CheckSquare size={15} /> Select all ({filtered.length})
+            </button>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {filtered.map((c, idx) => (
+              <Card key={c.id} className={`p-5 transition-all ${selected.includes(c.id) ? 'ring-2 ring-blue-500 border-blue-300 dark:border-blue-700' : ''}`}>
+                <div className="flex items-start gap-3">
+                  <input type="checkbox" checked={selected.includes(c.id)} onChange={() => toggleSelect(c.id)} className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4 flex-shrink-0" />
+                  <Avatar initials={c.avatar} color={colorPalette[idx % colorPalette.length]} size="md" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2 flex-wrap">
+                      <div>
+                        <h3 className="font-semibold text-gray-900 dark:text-white">{c.name}</h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{c.email} • {c.experience}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${c.matchScore >= 80 ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' : c.matchScore >= 60 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>{c.matchScore}% Match</span>
+                      </div>
+                    </div>
+                    <div className="mt-2">
+                      <ProgressBar value={c.matchScore} color={c.matchScore >= 80 ? 'green' : c.matchScore >= 60 ? 'yellow' : 'red'} size="sm" />
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {c.skills.slice(0, 3).map(s => <Tag key={s} variant="blue">{s}</Tag>)}
+                      {c.skills.length > 3 && <Tag variant="gray">+{c.skills.length - 3}</Tag>}
+                    </div>
+                    <div className="flex items-center gap-3 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                      <div className="relative flex-1">
+                        <select value={c.status} onChange={e => updateStatus(c.id, e.target.value)} className="w-full appearance-none text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                          {['Applied', 'Under Review', 'Shortlisted', 'Interview Scheduled', 'Selected', 'Rejected'].map(s => <option key={s}>{s}</option>)}
+                        </select>
+                      </div>
+                      <Badge variant={statusVariants[c.status] || 'default'} dot>{c.status}</Badge>
+                      <Link to={`/recruiter/applicants/${c.id}`}>
+                        <Button size="xs" variant="secondary">View Resume</Button>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
