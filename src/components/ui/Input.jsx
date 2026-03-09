@@ -20,6 +20,8 @@ export const Input = ({ label, error, hint, icon: Icon, className, ...props }) =
   </div>
 );
 
+Input.displayName = 'Input';
+
 export const Textarea = ({ label, error, className, ...props }) => (
   <div className="flex flex-col gap-1">
     {label && <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>}
@@ -34,3 +36,5 @@ export const Textarea = ({ label, error, className, ...props }) => (
     {error && <span className="text-xs text-red-600">{error}</span>}
   </div>
 );
+
+Textarea.displayName = 'Textarea';

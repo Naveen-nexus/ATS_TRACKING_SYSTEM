@@ -29,3 +29,5 @@ export const Button = ({ variant = 'primary', size = 'md', loading, disabled, ch
     {children}
   </button>
 );
+
+Button.displayName = 'Button';
