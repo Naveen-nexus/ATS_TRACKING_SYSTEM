@@ -32,6 +32,7 @@ import { Analytics } from './pages/recruiter/Analytics';
 import { ResumeAnalysis } from './pages/recruiter/ResumeAnalysis';
 import { RecruiterSettings } from './pages/recruiter/Settings';
 import { NotFound } from './pages/NotFound';
+import ScrollToTop from './components/ui/ScrollToTop';
 
 const ProtectedRoute = ({ children, allowedRole }) => {
   const { user, isAuthenticated } = useAuth();
@@ -96,6 +97,7 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <BrowserRouter>
+          <ScrollToTop />
           <AppRoutes />
           <Toaster
             position="top-right"
