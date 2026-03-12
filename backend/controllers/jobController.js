@@ -49,7 +49,7 @@ const createJob = async (req, res) => {
 // @access  Public
 const getJobs = async (req, res) => {
   try {
-    const { title, location, jobType, skills } = req.query;
+    const { title, location, jobType, skills, page = 1, limit = 10 } = req.query;
     
     let query = {};
     
@@ -70,8 +70,18 @@ const getJobs = async (req, res) => {
       query.skillsRequired = { $in: skillsArray.map(s => new RegExp(s, 'i')) };
     }
 
-    const jobs = await Job.find(query).sort({ createdAt: -1 });
-    res.json(jobs);
+    const count = await Job.countDocuments(query);
+    const jobs = await Job.find(query)
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .sort({ createdAt: -1 });
+
+    res.json({
+      jobs,
+      totalPages: Math.ceil(count / limit),
+      currentPage: Number(page),
+      totalJobs: count
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
